@@ -349,7 +349,7 @@ CONFIG_MAP: ConfigDict = {
         "kernel-size": KernelSizeValue(-1),
         "luma-only": False,
         "min-scene-len": TimecodeValue(0),
-        "threshold": RangeValue(27.0, min_val=0.0, max_val=255.0),
+        "threshold": RangeValue(25.0, min_val=0.0, max_val=255.0),
         "weights": ScoreWeightsValue(ContentDetector.DEFAULT_COMPONENT_WEIGHTS),
     },
     "detect-hash": {
