@@ -174,7 +174,7 @@ class ContentDetector(SceneDetector):
         var_right = np.var(right)
         right_diff = np.abs(np.diff(right)).mean() #惩罚右边不平滑
         smoothness_right = lambda_smooth / (right_diff + 0.5)
-        score = (mean_right - mean_left) * (len(arr) - idx + 1) - lambda_var * (var_left + var_right) + smoothness_right
+        score = max(0, mean_right - mean_left) * (len(arr) - idx + 1) - lambda_var * (var_left + var_right) # + smoothness_right
         return score
 
     """
@@ -234,9 +234,9 @@ class ContentDetector(SceneDetector):
 
         diff = cv2.compareHist(hist1, hist2, cv2.HISTCMP_BHATTACHARYYA)
 
-        frame_score *= min(diff, self._hardcut_hist_diff) / self._hardcut_hist_diff
+        logging.info(f"hardcut {timecode} {frame_score} {diff}")
 
-        logging.info(f"hardcut {timecode} {diff}")
+        frame_score *= min(diff, self._hardcut_hist_diff) / self._hardcut_hist_diff
 
         # Store all data required to calculate the next frame's score.
         self._last_frames.append(ContentDetector._FrameData(hue, sat, lum, edges))
@@ -260,7 +260,7 @@ class ContentDetector(SceneDetector):
             sats_cnt.append(_mean_pixel_distance(sats[i], sats[i - 1]))
             lums_cnt.append(_mean_pixel_distance(lums[i], lums[i - 1]))
             edges_cnt.append(0.0 if edges[i] is None else _mean_pixel_distance(edges[i], edges[i - 1]))
-        mxscore = 0
+        mxscore = -100
         mxscore_i = -1
         for i in range(self._min_scene_len, len(hues_cnt) - self._min_softcut_len):
             score = self.split_score(hues_cnt, i) * self._weights.delta_hue + \
@@ -271,6 +271,8 @@ class ContentDetector(SceneDetector):
             if score > mxscore:
                 mxscore = score
                 mxscore_i = i
+        logging.info(f"softcut {timecode} {hues_cnt}")
+        logging.info(f"softcut {timecode} {mxscore_i}")
         if mxscore_i == -1:
             return 0.0, 0.0
         
@@ -287,6 +289,8 @@ class ContentDetector(SceneDetector):
         frame_score: float = sum(
             component * weight for (component, weight) in zip(score_components, self._weights)
         ) / sum(abs(weight) for weight in self._weights)
+
+        logging.info(f"softcut {timecode} {frame_score}")
 
         if frame_score < self._threshold:
             return 0.0, frame_score
